@@ -1231,10 +1231,20 @@ function showLargeThumb(el, url, label) {
   if (!preview) return;
   img.src = url;
   lbl.textContent = label;
-  var rect = el.getBoundingClientRect();
+  // Show offscreen first to measure height
   preview.style.display = 'block';
-  preview.style.left = (rect.left + window.scrollX) + 'px';
-  preview.style.top  = (rect.top  + window.scrollY - preview.offsetHeight - 10) + 'px';
+  preview.style.left = '-9999px';
+  var rect    = el.getBoundingClientRect();
+  var prevH   = preview.offsetHeight;
+  var prevW   = preview.offsetWidth;
+  // Position above the hovered element, centred horizontally on it
+  var left = rect.left + (rect.width / 2) - (prevW / 2);
+  var top  = rect.top - prevH - 10;
+  // Clamp to viewport
+  left = Math.max(8, Math.min(left, window.innerWidth - prevW - 8));
+  if (top < 8) top = rect.bottom + 10;
+  preview.style.left = left + 'px';
+  preview.style.top  = top  + 'px';
 }
 
 function hideLargeThumb() {
