@@ -1245,18 +1245,25 @@ function openPagePicker(issue, targetPage, event) {
   var coverImg = document.getElementById('modal-cover-img');
   if (coverImg) coverImg.onerror = function() { this.src = targetThumb; };
 
-  // Check purchase URL — if 404, fall back to generic store link
-  fetch(purchaseUrl, { method: 'HEAD' })
-    .then(function(r) {
-      if (!r.ok) {
-        var btn  = document.getElementById('modal-purchase-btn');
-        var link = document.getElementById('modal-cover-link');
-        if (btn)  { btn.href  = fallbackUrl; btn.textContent = 'Go to Woodturning Magazine \u2192'; }
-        if (link) link.href = fallbackUrl;
-      }
+  // Check purchase URL availability using an image probe (avoids CORS issues).
+  // gmcsubscriptions.com returns an og:image we can probe; if the page 404s the
+  // probe image also 404s. We use a tiny favicon probe instead — if the product
+  // page exists, the server returns 200; if not, we get a redirect to a 404 page.
+  // Simplest reliable method: just try loading the cover image from their CDN.
+  // Actually the most reliable cross-origin check is to attempt a no-cors fetch
+  // and treat any response (even opaque) as success; only a network error means
+  // we can't reach it. For a true 404 check we use a script tag trick.
+  //
+  // Practical approach: try fetch with no-cors. If it resolves (opaque or not) = reachable.
+  // If it throws = unreachable. We cannot detect 404 vs 200 cross-origin without CORS.
+  // So instead: assume URL is valid unless we already know the issue doesn't exist.
+  // For now, just verify the domain is reachable; if not, show fallback.
+  fetch(purchaseUrl, { method: 'GET', mode: 'no-cors' })
+    .then(function() {
+      // Opaque response — domain reachable, keep URL as-is
     })
     .catch(function() {
-      // Network error — fall back silently
+      // Network failure — show generic fallback
       var btn  = document.getElementById('modal-purchase-btn');
       var link = document.getElementById('modal-cover-link');
       if (btn)  { btn.href  = fallbackUrl; btn.textContent = 'Go to Woodturning Magazine \u2192'; }
@@ -1294,18 +1301,27 @@ function showLargeThumb(el, url, label) {
   var img     = document.getElementById('thumb-hover-img');
   var lbl     = document.getElementById('thumb-hover-label');
   if (!preview) return;
-  img.src = url;
   lbl.textContent = label;
-  // Show offscreen first to measure height
   preview.style.display = 'block';
   preview.style.left = '-9999px';
-  var rect    = el.getBoundingClientRect();
-  var prevH   = preview.offsetHeight;
-  var prevW   = preview.offsetWidth;
-  // Position above the hovered element, centred horizontally on it
-  var left = rect.left + (rect.width / 2) - (prevW / 2);
-  var top  = rect.top - prevH - 10;
-  // Clamp to viewport
+  preview.style.top  = '-9999px';
+
+  // Wait for the image to load so we know the real preview height
+  img.onload = function() { positionPreview(el); };
+  img.onerror = function() { positionPreview(el); };
+  // If image is already cached, onload won't fire — call directly
+  img.src = url;
+  if (img.complete) positionPreview(el);
+}
+
+function positionPreview(el) {
+  var preview = document.getElementById('thumb-hover-preview');
+  if (!preview) return;
+  var rect  = el.getBoundingClientRect();
+  var prevH = preview.offsetHeight;
+  var prevW = preview.offsetWidth;
+  var left  = rect.left + (rect.width / 2) - (prevW / 2);
+  var top   = rect.top - prevH - 10;
   left = Math.max(8, Math.min(left, window.innerWidth - prevW - 8));
   if (top < 8) top = rect.bottom + 10;
   preview.style.left = left + 'px';
