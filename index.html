@@ -1155,17 +1155,16 @@ function buildRefRows(refs, cfg) {
 function buildRefLinks(refs, cfg) { return buildRefRows(refs, cfg); }
 
 
+const IMAGES_BASE = 'https://rmaxey.github.io/woodturning-images';
+
 function buildPdfUrl(cfg, issue, page) {
   const pageStr = String(page).padStart(3, '0');
-  // URL-encode the space in folder name "WTUR NNN"
-  return 'WTUR%20' + issue + '/' + pageStr + '_WTUR_' + issue + '.pdf';
+  return IMAGES_BASE + '/WTUR%20' + issue + '/' + pageStr + '_WTUR_' + issue + '.pdf';
 }
 
 function buildThumbUrl(cfg, issue, page) {
-  // Thumbnails live in a thumbs/ subfolder inside each issue folder
-  // e.g. WTUR%20289/thumbs/027_WTUR_289.jpg
   const pageStr = String(page).padStart(3, '0');
-  return 'WTUR%20' + issue + '/thumbs/' + pageStr + '_WTUR_' + issue + '.jpg';
+  return IMAGES_BASE + '/WTUR%20' + issue + '/thumbs/' + pageStr + '_WTUR_' + issue + '.jpg';
 }
 
 // ─────────────────────────────────────────────────────
@@ -1177,7 +1176,7 @@ function openPagePicker(issue, targetPage, event) {
 
   document.getElementById('modal-title').textContent = 'Issue ' + issue + '  \u00b7  Page ' + targetPage;
 
-  var coverUrl    = 'WTUR%20' + issue + '/thumbs/OFC_WTUR_' + issue + '.jpg';
+  var coverUrl    = IMAGES_BASE + '/WTUR%20' + issue + '/thumbs/OFC_WTUR_' + issue + '.jpg';
   var purchaseUrl = 'https://www.gmcsubscriptions.com/product/woodturning-issue-' + issue + '/';
   var targetThumb = buildThumbUrl(cfg, issue, targetPage);
 
@@ -1224,6 +1223,19 @@ function openPagePicker(issue, targetPage, event) {
   document.getElementById('modal').classList.add('open');
 }
 
+
+function showLargeThumb(el, url, label) {
+  var preview = document.getElementById('thumb-hover-preview');
+  var img     = document.getElementById('thumb-hover-img');
+  var lbl     = document.getElementById('thumb-hover-label');
+  if (!preview) return;
+  img.src = url;
+  lbl.textContent = label;
+  var rect = el.getBoundingClientRect();
+  preview.style.display = 'block';
+  preview.style.left = (rect.left + window.scrollX) + 'px';
+  preview.style.top  = (rect.top  + window.scrollY - preview.offsetHeight - 10) + 'px';
+}
 
 function hideLargeThumb() {
   var preview = document.getElementById('thumb-hover-preview');
