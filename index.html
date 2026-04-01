@@ -420,6 +420,20 @@ html, body {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
 }
+.modal-header-logo {
+  height: 28px;
+  width: auto;
+  filter: invert(1);
+  display: block;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.modal-header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
 .modal-header {
   background: #0e0b07;
   color: #fff;
@@ -546,7 +560,7 @@ html, body {
 }
 .modal-cover-col {
   flex-shrink: 0;
-  width: 140px;
+  width: 175px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -614,7 +628,11 @@ html, body {
 .nearby-thumb {
   width: 52px;
   text-align: center;
-  cursor: default;
+  cursor: pointer;
+}
+.nearby-thumb:hover img {
+  border-color: var(--accent);
+  opacity: 0.85;
 }
 .nearby-thumb img {
   width: 100%;
@@ -802,7 +820,10 @@ html, body {
 <div class="modal-backdrop" id="modal">
   <div class="modal" id="modal-inner">
     <div class="modal-header">
-      <h3 id="modal-title">Issue pages</h3>
+      <div class="modal-header-left">
+        <img id="modal-logo" class="modal-header-logo" src="" alt="Woodturning" />
+        <h3 id="modal-title">Issue pages</h3>
+      </div>
       <button class="modal-close" id="modal-close">×</button>
     </div>
     <div class="modal-body" id="modal-body">
@@ -1174,13 +1195,19 @@ function openPagePicker(issue, targetPage, event) {
   event && event.preventDefault();
   var cfg = MAG_CONFIG[currentMag];
 
+  // Copy logo src from header into modal
+  var headerLogo = document.getElementById('header-logo');
+  var modalLogo  = document.getElementById('modal-logo');
+  if (headerLogo && modalLogo) modalLogo.src = headerLogo.src;
+
   document.getElementById('modal-title').textContent = 'Issue ' + issue + '  \u00b7  Page ' + targetPage;
 
   var coverUrl    = IMAGES_BASE + '/WTUR%20' + issue + '/thumbs/OFC_WTUR_' + issue + '.jpg';
   var purchaseUrl = 'https://www.gmcsubscriptions.com/product/woodturning-issue-' + issue + '/';
+  var fallbackUrl = 'https://www.gmcsubscriptions.com/product/woodturning/';
   var targetThumb = buildThumbUrl(cfg, issue, targetPage);
 
-  // Build nearby pages strip
+  // Build nearby pages strip — each thumb is clickable and updates the main view
   var minPage = Math.max(1, targetPage - 4);
   var maxPage = Math.min(150, targetPage + 4);
   var nearbyItems = '';
@@ -1189,7 +1216,7 @@ function openPagePicker(issue, targetPage, event) {
     var cls  = p === targetPage ? 'nearby-thumb nearby-target' : 'nearby-thumb';
     var lbl  = 'p.' + p + (p === targetPage ? ' \u2605' : '');
     nearbyItems +=
-      '<div class="' + cls + '">' +
+      '<div class="' + cls + '" onclick="jumpToPage(' + issue + ',' + p + ')">' +
         '<img src="' + tUrl + '" alt="p.' + p + '" />' +
         '<div class="nearby-label">' + lbl + '</div>' +
       '</div>';
@@ -1199,28 +1226,66 @@ function openPagePicker(issue, targetPage, event) {
   body.innerHTML =
     '<div class="modal-issue-layout">' +
       '<div class="modal-cover-col">' +
-        '<a href="' + purchaseUrl + '" target="_blank" rel="noopener" class="modal-cover-link">' +
+        '<a id="modal-cover-link" href="' + purchaseUrl + '" target="_blank" rel="noopener" class="modal-cover-link">' +
           '<img id="modal-cover-img" src="' + coverUrl + '" alt="Issue ' + issue + ' cover" class="modal-cover-img" />' +
         '</a>' +
-        '<a href="' + purchaseUrl + '" target="_blank" rel="noopener" class="modal-purchase-btn">' +
+        '<a id="modal-purchase-btn" href="' + purchaseUrl + '" target="_blank" rel="noopener" class="modal-purchase-btn">' +
           'Purchase Issue ' + issue + ' \u2192' +
         '</a>' +
       '</div>' +
       '<div class="modal-pages-col">' +
         '<div class="modal-target-label">Article on page ' + targetPage + '</div>' +
-        '<img src="' + targetThumb + '" alt="Page ' + targetPage + '" class="modal-target-img" />' +
+        '<img id="modal-target-img" src="' + targetThumb + '" alt="Page ' + targetPage + '" class="modal-target-img" />' +
         '<div class="modal-nearby-label">Nearby pages</div>' +
         '<div class="modal-nearby-strip">' + nearbyItems + '</div>' +
       '</div>' +
     '</div>';
 
-  // Fallback: if cover not found, show target page thumb
+  // Cover fallback: if OFC image 404s, show target page thumb instead
   var coverImg = document.getElementById('modal-cover-img');
-  if (coverImg) {
-    coverImg.onerror = function() { this.src = targetThumb; };
-  }
+  if (coverImg) coverImg.onerror = function() { this.src = targetThumb; };
+
+  // Check purchase URL — if 404, fall back to generic store link
+  fetch(purchaseUrl, { method: 'HEAD' })
+    .then(function(r) {
+      if (!r.ok) {
+        var btn  = document.getElementById('modal-purchase-btn');
+        var link = document.getElementById('modal-cover-link');
+        if (btn)  { btn.href  = fallbackUrl; btn.textContent = 'Go to Woodturning Magazine \u2192'; }
+        if (link) link.href = fallbackUrl;
+      }
+    })
+    .catch(function() {
+      // Network error — fall back silently
+      var btn  = document.getElementById('modal-purchase-btn');
+      var link = document.getElementById('modal-cover-link');
+      if (btn)  { btn.href  = fallbackUrl; btn.textContent = 'Go to Woodturning Magazine \u2192'; }
+      if (link) link.href = fallbackUrl;
+    });
 
   document.getElementById('modal').classList.add('open');
+}
+
+// Called when a nearby-page thumb is clicked — updates the main page view in the modal
+function jumpToPage(issue, page) {
+  var cfg = MAG_CONFIG[currentMag];
+  var tImg = document.getElementById('modal-target-img');
+  if (tImg) {
+    tImg.src = buildThumbUrl(cfg, issue, page);
+    tImg.alt = 'Page ' + page;
+  }
+  var lbl = document.getElementById('modal-title');
+  if (lbl) lbl.textContent = 'Issue ' + issue + '  \u00b7  Page ' + page;
+
+  // Update nearby strip highlight
+  var thumbs = document.querySelectorAll('.nearby-thumb');
+  thumbs.forEach(function(t, i) {
+    var minPage = Math.max(1, page - 4);
+    var p = minPage + i;
+    t.classList.toggle('nearby-target', p === page);
+    var nl = t.querySelector('.nearby-label');
+    if (nl) nl.textContent = 'p.' + p + (p === page ? ' \u2605' : '');
+  });
 }
 
 
