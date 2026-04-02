@@ -1231,7 +1231,7 @@ function openPagePicker(issue, targetPage, event) {
     '<div class="modal-issue-layout">' +
       '<div class="modal-cover-col">' +
         '<a id="modal-cover-link" href="' + purchaseUrl + '" target="_blank" rel="noopener" class="modal-cover-link">' +
-          '<img id="modal-cover-img" src="' + coverUrl + '" alt="Issue ' + issue + ' cover" class="modal-cover-img" />' +
+          '<img id="modal-cover-img" alt="Issue ' + issue + ' cover" class="modal-cover-img" />' +
         '</a>' +
         '<a id="modal-purchase-btn" href="' + purchaseUrl + '" target="_blank" rel="noopener" class="modal-purchase-btn">' +
           'Purchase Issue ' + issue + ' \u2192' +
@@ -1245,9 +1245,12 @@ function openPagePicker(issue, targetPage, event) {
       '</div>' +
     '</div>';
 
-  // Cover fallback: if OFC image 404s, show target page thumb instead
+  // Set cover src AFTER attaching onerror so the event is never missed
   var coverImg = document.getElementById('modal-cover-img');
-  if (coverImg) coverImg.onerror = function() { this.src = targetThumb; };
+  if (coverImg) {
+    coverImg.onerror = function() { this.onerror = null; this.src = targetThumb; };
+    coverImg.src = coverUrl;
+  }
 
   // Check purchase URL availability using an image probe (avoids CORS issues).
   // gmcsubscriptions.com returns an og:image we can probe; if the page 404s the
@@ -1324,10 +1327,12 @@ function positionPreview(el) {
   var rect  = el.getBoundingClientRect();
   var prevH = preview.offsetHeight;
   var prevW = preview.offsetWidth;
+  // Horizontally: centred over the hovered element, clamped to viewport
   var left  = rect.left + (rect.width / 2) - (prevW / 2);
-  var top   = rect.top - prevH - 10;
   left = Math.max(8, Math.min(left, window.innerWidth - prevW - 8));
-  if (top < 8) top = rect.bottom + 10;
+  // Vertically: fixed at the centre of the viewport regardless of row position
+  var top = (window.innerHeight / 2) - (prevH / 2);
+  top = Math.max(8, Math.min(top, window.innerHeight - prevH - 8));
   preview.style.left = left + 'px';
   preview.style.top  = top  + 'px';
 }
