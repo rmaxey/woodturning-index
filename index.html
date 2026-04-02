@@ -1250,32 +1250,24 @@ function openPagePicker(issue, targetPage, event) {
   if (coverImg) {
     coverImg.onerror = function() { this.onerror = null; this.src = targetThumb; };
     coverImg.src = coverUrl;
+    console.log('[modal] cover URL:', coverUrl);
   }
 
-  // Check purchase URL availability using an image probe (avoids CORS issues).
-  // gmcsubscriptions.com returns an og:image we can probe; if the page 404s the
-  // probe image also 404s. We use a tiny favicon probe instead — if the product
-  // page exists, the server returns 200; if not, we get a redirect to a 404 page.
-  // Simplest reliable method: just try loading the cover image from their CDN.
-  // Actually the most reliable cross-origin check is to attempt a no-cors fetch
-  // and treat any response (even opaque) as success; only a network error means
-  // we can't reach it. For a true 404 check we use a script tag trick.
-  //
-  // Practical approach: try fetch with no-cors. If it resolves (opaque or not) = reachable.
-  // If it throws = unreachable. We cannot detect 404 vs 200 cross-origin without CORS.
-  // So instead: assume URL is valid unless we already know the issue doesn't exist.
-  // For now, just verify the domain is reachable; if not, show fallback.
-  fetch(purchaseUrl, { method: 'GET', mode: 'no-cors' })
-    .then(function() {
-      // Opaque response — domain reachable, keep URL as-is
-    })
-    .catch(function() {
-      // Network failure — show generic fallback
+  // Check purchase URL for 404 using a script-tag probe (works cross-origin).
+  // A 200 page loads the script silently; a 404 fires onerror.
+  (function() {
+    var probe = document.createElement('script');
+    probe.src = purchaseUrl;
+    probe.onload = function() { document.head.removeChild(probe); };
+    probe.onerror = function() {
+      document.head.removeChild(probe);
       var btn  = document.getElementById('modal-purchase-btn');
       var link = document.getElementById('modal-cover-link');
-      if (btn)  { btn.href  = fallbackUrl; btn.textContent = 'Go to Woodturning Magazine \u2192'; }
+      if (btn)  { btn.href = fallbackUrl; btn.textContent = 'Go to Woodturning Magazine \u2192'; }
       if (link) link.href = fallbackUrl;
-    });
+    };
+    document.head.appendChild(probe);
+  })();
 
   document.getElementById('modal').classList.add('open');
 }
