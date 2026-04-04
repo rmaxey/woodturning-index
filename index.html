@@ -777,7 +777,7 @@ html, body {
 
     <div class="app-header-right">
       <div id="build-stamp" style="font-size:0.68rem;color:rgba(255,255,255,0.4);letter-spacing:0.05em;text-align:right;line-height:1.4;">
-        v2026-04-02<br>4:30 PM EST
+        v2026-04-02<br>5:00 PM EST
       </div>
     </div>
   </header>
@@ -1062,27 +1062,65 @@ function renderResults(query, sectionFilter) {
     return;
   }
 
-  const sortedLetters = Object.keys(groups).sort();
+  const sortMode = (document.getElementById('sort-select') || {}).value || 'alpha';
   let html = '';
 
-  sortedLetters.forEach(letter => {
-    html += `<div class="letter-group" id="letter-${letter}">`;
-    html += `<div class="letter-heading">${letter}</div>`;
-
-    groups[letter].forEach(entry => {
-      html += renderEntry(entry, searchTerm, cfg);
-
-      if (entry.subs && entry.subs.length > 0) {
-        entry.subs.forEach(sub => {
-          if (sectionFilter !== 'all' && entry.section !== sectionFilter) return;
-          if (searchTerm && !subMatchesSearch(sub, searchTerm)) return;
-          html += renderSubEntry(sub, searchTerm, cfg);
+  if (sortMode === 'issue') {
+    // Collect all matched entries, group by issue number
+    const issueGroups = {};
+    Object.values(groups).forEach(entries => {
+      entries.forEach(entry => {
+        entry.refs.forEach(ref => {
+          if (!issueGroups[ref.i]) issueGroups[ref.i] = new Set();
+          issueGroups[ref.i].add(entry);
         });
-      }
+      });
     });
 
-    html += `</div>`;
-  });
+    const sortedIssues = Object.keys(issueGroups).map(Number).sort((a, b) => b - a);
+    sortedIssues.forEach(issueNum => {
+      html += `<div class="letter-group" id="issue-${issueNum}">`;
+      html += `<div class="letter-heading">Issue ${issueNum}</div>`;
+
+      // Sort terms alphabetically within each issue
+      const entries = Array.from(issueGroups[issueNum]).sort((a, b) =>
+        a.term.localeCompare(b.term));
+
+      entries.forEach(entry => {
+        html += renderEntry(entry, searchTerm, cfg);
+        if (entry.subs && entry.subs.length > 0) {
+          entry.subs.forEach(sub => {
+            if (searchTerm && !subMatchesSearch(sub, searchTerm)) return;
+            html += renderSubEntry(sub, searchTerm, cfg);
+          });
+        }
+      });
+
+      html += `</div>`;
+    });
+
+  } else {
+    // Default: alphabetical grouping
+    const sortedLetters = Object.keys(groups).sort();
+    sortedLetters.forEach(letter => {
+      html += `<div class="letter-group" id="letter-${letter}">`;
+      html += `<div class="letter-heading">${letter}</div>`;
+
+      groups[letter].forEach(entry => {
+        html += renderEntry(entry, searchTerm, cfg);
+
+        if (entry.subs && entry.subs.length > 0) {
+          entry.subs.forEach(sub => {
+            if (sectionFilter !== 'all' && entry.section !== sectionFilter) return;
+            if (searchTerm && !subMatchesSearch(sub, searchTerm)) return;
+            html += renderSubEntry(sub, searchTerm, cfg);
+          });
+        }
+      });
+
+      html += `</div>`;
+    });
+  }
 
   container.innerHTML = html;
 
