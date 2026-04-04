@@ -777,7 +777,7 @@ html, body {
 
     <div class="app-header-right">
       <div id="build-stamp" style="font-size:0.68rem;color:rgba(255,255,255,0.4);letter-spacing:0.05em;text-align:right;line-height:1.4;">
-        v2026-04-02<br>4:15 PM EST
+        v2026-04-02<br>4:30 PM EST
       </div>
     </div>
   </header>
@@ -1342,6 +1342,33 @@ function toggleEntry(id) {
 // Init: launch directly into Woodturning index
 (function() {
   launchApp();
+
+  // Wire up search input
+  var searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      handleSearch();
+    });
+  }
+
+  // Wire up section filter
+  var sectionFilter = document.getElementById('section-filter');
+  if (sectionFilter) {
+    sectionFilter.addEventListener('change', function() {
+      var q = document.getElementById('search-input').value;
+      renderResults(q, this.value);
+    });
+  }
+
+  // Wire up sort select
+  var sortSelect = document.getElementById('sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', function() {
+      var q = document.getElementById('search-input').value;
+      var sec = document.getElementById('section-filter').value;
+      renderResults(q, sec);
+    });
+  }
 
   // Modal close button
   var closeBtn = document.getElementById('modal-close');
